@@ -53,7 +53,7 @@ def connect_and_login(group_id: str):
     # chrome = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
     # chrome.get("https://facebook.com/groups/744721719556973/")
     # chrome.save_screenshot("my_screenshot.png")
-    options = Options()
+    options = webdriver.ChromeOptions()
     options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
     options.add_argument("--disable-notifications")
     options.add_argument("--headless")
@@ -63,7 +63,6 @@ def connect_and_login(group_id: str):
     options.add_argument("--no-sandbox")
     chrome = webdriver.Chrome(executable_path=os.environ.get(
         "CHROMEDRIVER_PATH"), chrome_options=options)
-
 
     # chrome = webdriver.Chrome(chrome_options=options)
     # email = chrome.find_element_by_xpath(
