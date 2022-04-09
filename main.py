@@ -30,7 +30,7 @@ import json
 import pprint
 import os
 import uvicorn
-import nest_asyncio
+# import nest_asyncio
 
 app = FastAPI()  # gọi constructor và gán vào biến app
 
@@ -60,9 +60,10 @@ def connect_and_login(group_id: str):
     options.add_argument('--disable-gpu')
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("window-size=1400,900")
+    options.add_argument("--start-maximized")
     chrome = webdriver.Chrome(executable_path=os.environ.get(
         "CHROMEDRIVER_PATH"), chrome_options=options)
+    # chrome = webdriver.Chrome('./chromedriver', chrome_options=options)
 
     # chrome = webdriver.Chrome(chrome_options=options)
     # email = chrome.find_element_by_xpath(
