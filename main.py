@@ -11,7 +11,9 @@
 Created on Thu Sep  2 01:57:06 2021
 @author: wenchen
 """
+from http import cookies
 import pickle
+from socket import timeout
 
 from typing import Optional
 from email import message
@@ -30,65 +32,62 @@ import json
 import pprint
 import os
 import uvicorn
-# import nest_asyncio
+from facebook_scraper import get_posts
 
+# import nest_asyncio
 app = FastAPI()  # gọi constructor và gán vào biến app
 
-# class Post:
-#   def __init__(self, author, content):
-#     self.author = author
-#     self.content = content
 
-
-def connect_and_login(group_id: str):
-    # connertion
-    # chrome_options = webdriver.ChromeOptions()
-    # chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-    # chrome_options.add_argument("--disable-notifications")
-    # chrome_options.add_argument("--headless")
-    # chrome_options.add_argument('--disable-gpu')
-    # chrome_options.add_argument("--no-sandbox")
-    # chrome_options.add_argument("--disable-dev-shm-usage")
-    # chrome_options.add_argument("window-size=1400,900")
-    # chrome = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
-    # chrome.get("https://facebook.com/groups/744721719556973/")
-    # chrome.save_screenshot("my_screenshot.png")
-    options = webdriver.ChromeOptions()
-    options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+def connect_and_login_public(group_id: str):
+    PROXY = "113.20.99.18"
+    FILE_NAME_PROFILE = "C:\\Users\\tranhuytu242000\\AppData\\Local\\Google\\Chrome\\User Data"
+    options = Options()
+    # options.add_argument('--proxy-server=%s' % PROXY)
     options.add_argument("--disable-notifications")
     options.add_argument("--headless")
-    options.add_argument('--disable-gpu')
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--start-maximized")
-    chrome = webdriver.Chrome(executable_path=os.environ.get(
-        "CHROMEDRIVER_PATH"), chrome_options=options)
-    # chrome = webdriver.Chrome('./chromedriver', chrome_options=options)
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    # options.add_argument('--user-data-dir='+FILE_NAME_PROFILE)
+    # options.add_argument('profile-directory=Default')
+    chrome = webdriver.Chrome(chrome_options=options)
+    chrome.get("https://www.facebook.com/")
+    time.sleep(2)
+    email = chrome.find_element_by_xpath(
+        "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[1]/input")
+    password = chrome.find_element_by_xpath(
+        "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[2]/div/input")
+    email.send_keys("tu.th184216@sis.hust.edu.vn")
+    password.send_keys("Huytu@1111")
+    password.submit()
+    time.sleep(2)
+    chrome.get("https://www.facebook.com/groups/"+group_id)
+    return chrome
 
-    # chrome = webdriver.Chrome(chrome_options=options)
-    # email = chrome.find_element_by_xpath(
-    #     "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[1]/input")
-    # password = chrome.find_element_by_xpath(
-    #     "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[2]/div/input")
-    # # read password from file
-    # with open(password_filename) as f:
-    #     lines = f.readlines()
-    # my_password = lines
-    # email.send_keys("195d140209056@hpu2.edu.vn")
-    # password.send_keys("hong654321")
-    # password.submit()
-    # waiting login
-    # time.sleep(10)
-    # chrome.get("https://www.facebook.com/")
-    # email = chrome.find_element_by_xpath(
-    #     "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[1]/input")
-    # password = chrome.find_element_by_xpath(
-    #     "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[2]/div/input")
-    # email.send_keys("tu.th184216@sis.hust.edu.vn")
-    # password.send_keys("Huytu@1111")
-    # password.submit()
-    # time.sleep(10)
-    # pickle.dump(chrome.get_cookies(), open("my_cookie.pkl", "wb"))
+
+def connect_and_login_private(group_id: str):
+    PROXY = "113.20.99.18"
+    # FILE_NAME_PROFILE="C:\\Users\\tranhuytu242000\\AppData\\Local\\Google\\Chrome\\User Data"
+    options = Options()
+    # options.add_argument('--proxy-server=%s' % PROXY)
+    options.add_argument("--disable-notifications")
+    options.add_argument("--headless")
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    # options.add_argument('--user-data-dir='+FILE_NAME_PROFILE)
+    # options.add_argument('profile-directory=Default')
+    chrome = webdriver.Chrome(chrome_options=options)
+    chrome.get("https://www.facebook.com/")
+    time.sleep(2)
+    email = chrome.find_element_by_xpath(
+        "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[1]/input")
+    password = chrome.find_element_by_xpath(
+        "/html/body/div[1]/div[2]/div[1]/div/div/div/div[2]/div/div[1]/form/div[1]/div[2]/div/input")
+    email.send_keys("tu.th184216@sis.hust.edu.vn")
+    password.send_keys("Huytu@1111")
+    password.submit()
+    time.sleep(2)
     chrome.get("https://www.facebook.com/groups/"+group_id)
     return chrome
 
@@ -108,33 +107,18 @@ def get_all_post(chrome, num):
     soup = BeautifulSoup(chrome.page_source, 'html.parser')
     while(i < num):
         # rolling page
+        time.sleep(2)
         chrome.execute_script("window.scrollTo(0,document.body.scrollHeight)")
         tree = html.fromstring(chrome.page_source)
         soup = BeautifulSoup(chrome.page_source, 'html.parser')
         # click See more
         i = i+1
-        # click See more
-        # elements = chrome.find_elements(By.XPATH, "/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div[4]/div/div/div/div/div/div[1]/div[2]/div[3]/div[3]/div/div/div/div/div/div/div/div/div/div[2]/div/div[3]/div[1]/div/div/div/span/div[2]/div[4]/div")
-        # el = tree.xpath("//*[text()='See more']")
-        # for k in range(len(elements)):
-        #     try:
-        #         elements[k].click()
-        #     except :
-        #         if(el[k].getroottree().getpath(el[k])!="/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div[1]/div/div/div[1]/div/div/div[1]/div[1]/div[1]/div/div[1]/div[2]/div/div/div/div/span/span"):
-        #             print("missed some content", el[k].getroottree().getpath(el[k]))
     match = soup.find_all('div', class_='du4w35lb k4urcfbm l9j0dhe7 sjgh65i0')
     time.sleep(6)
     for ele in match:
-        # if click !=None:
-        #     click=ele.getText()
         author = ele.find(
             'h2', class_='gmql0nx0 l94mrbxd p1ri9a11 lzcic4wl aahdfvyu hzawbc8m').strong.span.text
         content = ele.find('div', {'class': regex})
-        # if content.div != None:
-        #     content = content.getText()
-        # elif content.span != None:
-        #     content = content.getText()
-        # else:
         if type(content) != str:
             try:
                 content = content.getText()
@@ -226,22 +210,44 @@ def post_decode(posts, author, content, img_content, like):
     return info_list
 
 
-@app.get("/{group_id}")  # giống flask, khai báo phương thức get và url
+@app.get("/public/{group_id}")  # giống flask, khai báo phương thức get và url
 # RUN:python -m uvicorn main:app --reload
 # do dùng ASGI nên ở đây thêm async, nếu bên thứ 3 không hỗ trợ thì bỏ async đi
 async def root(group_id: str, q: Optional[str] = None):
     if group_id == None:
         return {"message": "Group id cannot be null"}
-    chrome = connect_and_login(group_id)
-    posts = get_all_post(chrome, num=15)
-    chrome.quit()
-    return posts
-if __name__ == '__main__':
-    chrome = connect_and_login('744721719556973')
-    posts = get_all_post(chrome, num=10)
-    # info_list = post_decode(posts, author=True, content=True, img_content=True, like=True)
-    pprint.pprint(posts)
+    # chrome = connect_and_login_public(group_id)
+    # posts = get_all_post(chrome, num=5)
     # chrome.quit()
+    posts = get_posts(group=group_id, pages=1, timeout=30,
+                      options={"posts_per_page": 10})
+    datas = []
+    for post in posts:
+        phone_number = re.findall("0[0-9]{9}", post['post_text'])
+        datas.append({'author': post['username'],
+                     'content': post['text'], 'phone_number': phone_number})
+
+    return datas
+
+
+@app.get("/private/{group_id}")  # giống flask, khai báo phương thức get và url
+# RUN:python -m uvicorn main:app --reload
+# do dùng ASGI nên ở đây thêm async, nếu bên thứ 3 không hỗ trợ thì bỏ async đi
+async def root(group_id: str, q: Optional[str] = None):
+    if group_id == None:
+        return {"message": "Group id cannot be null"}
+    # chrome = connect_and_login_public(group_id)
+    # posts = get_all_post(chrome, num=5)
+    # chrome.quit()
+    posts = get_posts(group=group_id, pages=1, timeout=30,cookies="fb_cookies.txt",
+                      options={"posts_per_page": 10})
+    datas = []
+    for post in posts:
+        phone_number = re.findall("0[0-9]{9}", post['post_text'])
+        datas.append({'author': post['username'],
+                     'content': post['text'], 'phone_number': phone_number})
+
+    return datas
 
 # Allows the server to be run in this interactive environment
 # nest_asyncio.apply()

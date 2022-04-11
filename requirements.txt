@@ -44,3 +44,4 @@ webdrivermanager==0.10.0
 websockets==10.2
 wsproto==1.1.0
 nest-asyncio==1.5.1
+facebook-scraper
