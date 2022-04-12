@@ -33,8 +33,10 @@ import pprint
 import os
 import uvicorn
 from facebook_scraper import get_posts
+from facebook_scraper import set_proxy
+# from seleniumwire import webdriver
 
-# import nest_asyncio
+import nest_asyncio
 app = FastAPI()  # gọi constructor và gán vào biến app
 
 
@@ -225,7 +227,7 @@ async def root(group_id: str, q: Optional[str] = None):
     for post in posts:
         phone_number = re.findall("0[0-9]{9}", post['post_text'])
         datas.append({'author': post['username'],
-                     'content': post['text'], 'phone_number': phone_number})
+                     'content': post['post_text'], 'phone_number': phone_number})
 
     return datas
 
@@ -239,13 +241,13 @@ async def root(group_id: str, q: Optional[str] = None):
     # chrome = connect_and_login_public(group_id)
     # posts = get_all_post(chrome, num=5)
     # chrome.quit()
-    posts = get_posts(group=group_id, pages=1, timeout=30,cookies="fb_cookies.txt",
+    posts = get_posts(group=group_id, pages=1, timeout=30, cookies="fb_cookies.txt",
                       options={"posts_per_page": 10})
     datas = []
     for post in posts:
         phone_number = re.findall("0[0-9]{9}", post['post_text'])
         datas.append({'author': post['username'],
-                     'content': post['text'], 'phone_number': phone_number})
+                     'content': post['post_text'], 'phone_number': phone_number})
 
     return datas
 
