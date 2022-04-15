@@ -11,7 +11,9 @@
 Created on Thu Sep  2 01:57:06 2021
 @author: wenchen
 """
+from array import array
 from http import cookies
+import logging
 import pickle
 from socket import timeout
 
@@ -35,7 +37,10 @@ import uvicorn
 from facebook_scraper import get_posts
 from facebook_scraper import set_proxy
 # from seleniumwire import webdriver
-
+from datetime import datetime, timedelta
+from starlette.requests import Request
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import JSONResponse
 import nest_asyncio
 app = FastAPI()  # gọi constructor và gán vào biến app
 
@@ -212,6 +217,30 @@ def post_decode(posts, author, content, img_content, like):
     return info_list
 
 
+app.datas = list(
+    map(lambda x: {'index': x, 'status': True}, list(range(0, 100))))
+app.current = 0
+@app.get("/")
+async def root():
+    cookies=[]
+    with open("accounts.txt", encoding="utf-8") as file:
+        for index,line in enumerate(file):
+            l=line.strip("\n")
+            cookie={}
+            for k in l.split("|")[3].split(";"):
+                cookie[k.split("=")[0].lstrip()]=k.split("=")[1]
+            with open('./cookies/cookie_'+str(index)+".json", 'w', encoding='utf-8') as f:
+                json.dump(cookie, f, ensure_ascii=False, indent=4)
+    return cookies
+def checkAllFalse(array):
+    flag=True
+    for x in array:
+        if x['status']==True:
+            flag=False
+            break
+    return flag
+
+
 @app.get("/public/{group_id}")  # giống flask, khai báo phương thức get và url
 # RUN:python -m uvicorn main:app --reload
 # do dùng ASGI nên ở đây thêm async, nếu bên thứ 3 không hỗ trợ thì bỏ async đi
@@ -221,15 +250,43 @@ async def root(group_id: str, q: Optional[str] = None):
     # chrome = connect_and_login_public(group_id)
     # posts = get_all_post(chrome, num=5)
     # chrome.quit()
-    posts = get_posts(group=group_id, pages=1, timeout=30,
-                      options={"posts_per_page": 10})
-    datas = []
-    for post in posts:
-        phone_number = re.findall("0[0-9]{9}", post['post_text'])
-        datas.append({'author': post['username'],
-                     'content': post['post_text'], 'phone_number': phone_number})
-
-    return datas
+    posts=[]
+    # posts = get_posts(group=group_id, pages=1, extra_info=False, timeout=30, cookies="./cookies/cookie_"+str(app.current)+".json",
+    #                       options={"allow_extra_requests": False, "posts_per_page": 200})
+    try:
+        posts = get_posts(group=group_id, pages=1, extra_info=False, timeout=30, cookies="./cookies/cookie_"+str(app.current)+".json",
+                          options={"allow_extra_requests": False, "posts_per_page": 200})
+        for data in app.datas:
+            if(data['index'] == app.current):
+                data['status']=True
+    except Exception as ex:
+        for data in app.datas:
+            if(data['index'] == app.current):
+                data['status']=False
+        for data in app.datas:
+            if(data['status'] == True):
+                app.current=data['index']
+                break
+        if checkAllFalse(app.datas)==True:
+            app.current=0
+            for data in app.datas:
+                if(data['status'] == False):
+                    data['status']=True
+        print(app.datas)
+        print(app.current)
+        return posts
+    posts = sorted(posts, key=lambda x: x['timestamp'], reverse=True)
+    d = datetime.today() - timedelta(hours=0, minutes=5)
+    d = datetime.timestamp(d)
+    print("\nCurrent Cookie:%d \n" % app.current)
+    # app.i=app.i+1
+    # return app.i
+    # datas = []
+    # for post in posts:
+    #     phone_number = re.findall("0[0-9]{9}", post['post_text'])
+    #     datas.append({'author': post['username'],
+    #                  'content': post['post_text'], 'phone_number': phone_number})
+    return list(map(lambda post: {'author': post['username'], 'content': post['post_text'], 'phone_number': re.findall("0[0-9]{9}", post['post_text'])}, filter(lambda x: x['timestamp'] > d, posts)))
 
 
 @app.get("/private/{group_id}")  # giống flask, khai báo phương thức get và url
@@ -241,16 +298,34 @@ async def root(group_id: str, q: Optional[str] = None):
     # chrome = connect_and_login_public(group_id)
     # posts = get_all_post(chrome, num=5)
     # chrome.quit()
-    posts = get_posts(group=group_id, pages=1, timeout=30, cookies="fb_cookies.txt",
-                      options={"posts_per_page": 10})
-    datas = []
-    for post in posts:
-        phone_number = re.findall("0[0-9]{9}", post['post_text'])
-        datas.append({'author': post['username'],
-                     'content': post['post_text'], 'phone_number': phone_number})
-
-    return datas
-
+    posts = get_posts(group=group_id, pages=1, extra_info=False, timeout=10, cookies="fb_cookies.txt",
+                      options={"allow_extra_requests": False, "posts_per_page": 200})
+    posts = sorted(posts, key=lambda x: x['timestamp'], reverse=True)
+    d = datetime.today() - timedelta(hours=2, minutes=5)
+    d = datetime.timestamp(d)
+    # datas = []
+    # for post in posts:
+    #     phone_number = re.findall("0[0-9]{9}", post['post_text'])
+    #     datas.append({'author': post['username'],
+    #                  'content': post['post_text'], 'phone_number': phone_number})
+    return list(map(lambda post: {'author': post['username'], 'content': post['post_text'], 'phone_number': re.findall("0[0-9]{9}", post['post_text'])}, filter(lambda x: x['timestamp'] > d, posts)))
+# @app.middleware("http")
+# async def exception_handling(request: Request, call_next):
+#     try:
+#         return await call_next(request)
+#     except Exception as exc:
+#         logging.error("curent error "+str(app.current))
+#         for data in app.datas:
+#             if(data['index'] == app.current):
+#                 data['status']=False
+#         for data in app.datas:
+#             if(data['status'] == True):
+#                 app.current=data['index']
+#                 break
+#         if(app.current >= len(app.datas)):
+#             app.current = 0
+#         return JSONResponse(status_code=500, content=[])
+        # return await call_next(request)
 # Allows the server to be run in this interactive environment
 # nest_asyncio.apply()
 
